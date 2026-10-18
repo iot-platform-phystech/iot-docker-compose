@@ -12,6 +12,35 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iot -d iot_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  core:
+    build:
+      context: ../iot-core
+    container_name: iot_core
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  adapter:
+    build:
+      context: ../iot-http-adapter
+    container_name: iot_http_adapter
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      IOT_CORE_URL: http://core:8000
+      IOT_ADAPTER_HOST: 0.0.0.0
+    depends_on:
+      - core
 
 volumes:
   pgdata:
